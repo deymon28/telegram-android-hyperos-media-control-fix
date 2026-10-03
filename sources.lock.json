@@ -1,0 +1,146 @@
+[
+  {
+    "repository": "DrKLO/Telegram",
+    "revision": "f2908b14133bbffbf7ab04f641ecb5bfaf533242",
+    "path": ".",
+    "filename": "DrKLO-Telegram-f2908b14133bbffbf7ab04f641ecb5bfaf533242.zip",
+    "format": "zip",
+    "url": "https://codeload.github.com/DrKLO/Telegram/zip/f2908b14133bbffbf7ab04f641ecb5bfaf533242",
+    "sha256": "518db33193c2df042ed645864f84457d7d1ee240209c746eaa070ed18db42980"
+  },
+  {
+    "repository": "dkaraush/tlottie",
+    "revision": "92df98dc209bc39b1e567ec74a8c86a0af5239de",
+    "path": "TMessagesProj/jni/tlottie",
+    "filename": "dkaraush-tlottie-92df98dc209bc39b1e567ec74a8c86a0af5239de.zip",
+    "format": "zip",
+    "url": "https://codeload.github.com/dkaraush/tlottie/zip/92df98dc209bc39b1e567ec74a8c86a0af5239de",
+    "sha256": "20865dfed140c76def02f894abc22bbde135ef6f355453cec6eeeffd83913c16"
+  },
+  {
+    "repository": "webmproject/libvpx",
+    "revision": "1024874c5919305883187e2953de8fcb4c3d7fa6",
+    "path": "TMessagesProj/jni/third_party/libvpx",
+    "filename": "libvpx-1024874c5919305883187e2953de8fcb4c3d7fa6.zip",
+    "url": "https://codeload.github.com/webmproject/libvpx/zip/1024874c5919305883187e2953de8fcb4c3d7fa6",
+    "sha256": "98cd8c181daeba78c1ae413f1b5f0b7c475d0612dbfc9c913b75df26a75c1b08",
+    "format": "zip"
+  },
+  {
+    "repository": "videolan/dav1d",
+    "revision": "54706fc6bc0cdecab7e9593974a4039cc038fca7",
+    "path": "TMessagesProj/jni/third_party/dav1d",
+    "filename": "dav1d-54706fc6bc0cdecab7e9593974a4039cc038fca7.zip",
+    "url": "https://codeload.github.com/videolan/dav1d/zip/54706fc6bc0cdecab7e9593974a4039cc038fca7",
+    "sha256": "dc03b230985bd990a7377c16fc558f2be80717d27fc9e791106ee697993d42e0",
+    "format": "zip"
+  },
+  {
+    "repository": "FFmpeg/FFmpeg",
+    "revision": "45f1910444f34b02621f9f0426ea1a538a613c41",
+    "path": "TMessagesProj/jni/third_party/ffmpeg",
+    "filename": "FFmpeg-45f1910444f34b02621f9f0426ea1a538a613c41.zip",
+    "url": "https://codeload.github.com/FFmpeg/FFmpeg/zip/45f1910444f34b02621f9f0426ea1a538a613c41",
+    "sha256": "e828ad9c812b282c13b2b98ae44d24da3c9cb8171f94eda8e833adee286c8255",
+    "format": "zip"
+  },
+  {
+    "repository": "dkaraush/jlatexmath-android",
+    "revision": "919e50b2f6f64b04b712cdb13d558ff9ecf9c8ed",
+    "path": "TMessagesProj/lib/jlatexmath",
+    "filename": "jlatexmath.zip",
+    "url": "https://codeload.github.com/dkaraush/jlatexmath-android/zip/919e50b2f6f64b04b712cdb13d558ff9ecf9c8ed",
+    "sha256": "6edf8a629ca43de8be02dfc7fbe4ce2b225e5c0eaad08f8ab364e808592781a1",
+    "format": "zip"
+  },
+  {
+    "repository": "xiph/ogg",
+    "revision": "be05b13e98b048f0b5a0f5fa8ce514d56db5f822",
+    "path": "TMessagesProj/jni/third_party/xiph/ogg",
+    "filename": "ogg-be05b13e98b048f0b5a0f5fa8ce514d56db5f822.zip",
+    "url": "https://codeload.github.com/xiph/ogg/zip/be05b13e98b048f0b5a0f5fa8ce514d56db5f822",
+    "sha256": "18ec1d3e5ca3e910b8c86f0c35e35c1b36d6df2ba975d94f0bc46b6f5d001000",
+    "format": "zip"
+  },
+  {
+    "repository": "xiph/opusfile",
+    "revision": "a55c164e9891a9326188b7d4d216ec9a88373739",
+    "path": "TMessagesProj/jni/third_party/xiph/opusfile",
+    "filename": "opusfile-a55c164e9891a9326188b7d4d216ec9a88373739.zip",
+    "url": "https://codeload.github.com/xiph/opusfile/zip/a55c164e9891a9326188b7d4d216ec9a88373739",
+    "sha256": "4355e2bb58ca27dc4fb75ffda34886ae4e8e47a2c5c7b84d4b7d1c97a46d236a",
+    "format": "zip"
+  },
+  {
+    "repository": "xiph/opus",
+    "revision": "22244de5a79bd1d6d623c32e72bf1954b56235be",
+    "path": "TMessagesProj/jni/third_party/xiph/opus",
+    "filename": "opus-22244de5a79bd1d6d623c32e72bf1954b56235be.zip",
+    "url": "https://codeload.github.com/xiph/opus/zip/22244de5a79bd1d6d623c32e72bf1954b56235be",
+    "sha256": "f5b624fdcd9e0e99254f8a3c9cac9f2d2830ba2a2a3c77955ac7acd0d069df5e",
+    "format": "zip"
+  },
+  {
+    "repository": "libyuv",
+    "revision": "28ce69c2744a6aafdb58564e7b884aec3f66be5f",
+    "path": "TMessagesProj/jni/third_party/libyuv",
+    "filename": "libyuv.tar.gz",
+    "url": "https://chromium.googlesource.com/libyuv/libyuv/+archive/28ce69c2744a6aafdb58564e7b884aec3f66be5f.tar.gz",
+    "sha256": "6d73ebd89ac7e5d9e402aad7050bef060e344d50344ba9151eaedadc7b172fa2",
+    "format": "tar.gz"
+  },
+  {
+    "repository": "cisco/openh264",
+    "revision": "652bdb7719f30b52b08e506645a7322ff1b2cc6f",
+    "path": "TMessagesProj/jni/third_party/openh264",
+    "filename": "openh264-652bdb7719f30b52b08e506645a7322ff1b2cc6f.zip",
+    "url": "https://codeload.github.com/cisco/openh264/zip/652bdb7719f30b52b08e506645a7322ff1b2cc6f",
+    "sha256": "454b19b3ee56c6afc2ecdb496e61402632cf8c51a54d9dca9a38415b144ba95b",
+    "format": "zip"
+  },
+  {
+    "repository": "google/boringssl",
+    "revision": "2b44a3701a4788e1ef866ddc7f143060a3d196c9",
+    "path": "TMessagesProj/jni/third_party/boringssl",
+    "filename": "google-boringssl-2b44a3701a4788e1ef866ddc7f143060a3d196c9.zip",
+    "format": "zip",
+    "url": "https://codeload.github.com/google/boringssl/zip/2b44a3701a4788e1ef866ddc7f143060a3d196c9",
+    "sha256": "509c66b74bfc4ad27156b82bb8f38f0b344e865b439c1fe2fa292dc953f90a77"
+  },
+  {
+    "repository": "tdlib/td",
+    "revision": "022d60202e446ad1287b9fb68e687c8a0760788b",
+    "path": "TMessagesProj/jni/td",
+    "filename": "tdlib-td-022d60202e446ad1287b9fb68e687c8a0760788b.zip",
+    "format": "zip",
+    "url": "https://codeload.github.com/tdlib/td/zip/022d60202e446ad1287b9fb68e687c8a0760788b",
+    "sha256": "73b2ff5c066125a4dfa6eab0f28694d2e5eb1240b3bf17b9f70f041808e09713"
+  },
+  {
+    "repository": "Arseny271/media",
+    "revision": "c430d207677071b1873f9f18266d55ec45722180",
+    "path": "TMessagesProj_Modules/media",
+    "filename": "Arseny271-media-c430d207677071b1873f9f18266d55ec45722180.zip",
+    "format": "zip",
+    "url": "https://codeload.github.com/Arseny271/media/zip/c430d207677071b1873f9f18266d55ec45722180",
+    "sha256": "b93683c7a8a1ab293b90f6b3ff1a0824fb36efef432cdfb35b5dcc0a5479edc4"
+  },
+  {
+    "repository": "abseil/abseil-cpp",
+    "revision": "54fac219c4ef0bc379dfffb0b8098725d77ac81b",
+    "path": "TMessagesProj/jni/third_party/absl",
+    "filename": "abseil-abseil-cpp-54fac219c4ef0bc379dfffb0b8098725d77ac81b.zip",
+    "format": "zip",
+    "url": "https://codeload.github.com/abseil/abseil-cpp/zip/54fac219c4ef0bc379dfffb0b8098725d77ac81b",
+    "sha256": "3ac74ee85df4feec57aca7604f5b9cba215afb3f687779016e6be6a43d3a848a"
+  },
+  {
+    "repository": "wasm-micro-runtime/wasm-micro-runtime",
+    "revision": "25bd7eb63e828e4bd242cc9b38d260b4b31c6605",
+    "path": "TMessagesProj/jni/third_party/wamr",
+    "filename": "wasm-micro-runtime-wasm-micro-runtime-25bd7eb63e828e4bd242cc9b38d260b4b31c6605.zip",
+    "format": "zip",
+    "url": "https://codeload.github.com/wasm-micro-runtime/wasm-micro-runtime/zip/25bd7eb63e828e4bd242cc9b38d260b4b31c6605",
+    "sha256": "4fbc793e6a1171c969cb6f8094feb94b9338ea00944676a218a7e4aa3afac77a"
+  }
+]

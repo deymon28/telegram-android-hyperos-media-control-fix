@@ -1,0 +1,7 @@
+TG Media public release signing certificate
+Subject: CN=TG Media Release
+SHA-256: bbc0a90cd6b36067dc0eaf8c3395a93d0618162133a2b3df90f397cf45d22dec
+
+This is the public certificate fingerprint, not a private signing key.
+Updates must use this same certificate to replace the public installation.
+Personal and diagnostic packages use separate package IDs and signing keys.

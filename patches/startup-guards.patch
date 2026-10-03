@@ -1,0 +1,157 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserService.java b/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserService.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserService.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserService.java
+@@ -29,6 +29,7 @@
+     @Override
+     public void onCreate() {
+         super.onCreate();
++        if (!ApiCredentials.isConfigured(this)) return;
+         ApplicationLoader.postInitApplication();
+         TelegramMediaSession holder = TelegramMediaSession.getInstance(this);
+         setSessionToken(holder.getFrameworkSessionToken());
+@@ -42,6 +43,7 @@
+     @Nullable
+     @Override
+     public BrowserRoot onGetRoot(String clientPackageName, int clientUid, Bundle rootHints) {
++        if (!ApiCredentials.isConfigured(this)) return null;
+         if (clientPackageName == null) {
+             return null;
+         }
+@@ -57,6 +59,10 @@
+ 
+     @Override
+     public void onLoadChildren(@NonNull String parentMediaId, @NonNull Result<List<MediaBrowser.MediaItem>> result) {
++        if (!ApiCredentials.isConfigured(this)) {
++            result.sendResult(java.util.Collections.emptyList());
++            return;
++        }
+         TelegramMediaSession holder = TelegramMediaSession.getInstance(this);
+         if (holder.isPasscodeLocked()) {
+             Toast.makeText(getApplicationContext(), LocaleController.getString(R.string.EnterYourTelegramPasscode), Toast.LENGTH_LONG).show();
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerReceiver.java b/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerReceiver.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerReceiver.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerReceiver.java
+@@ -17,6 +17,7 @@
+ 
+     @Override
+     public void onReceive(Context context, Intent intent) {
++        if (!ApiCredentials.isConfigured(context) || intent == null || intent.getAction() == null) return;
+         if (intent.getAction().equals(Intent.ACTION_MEDIA_BUTTON)) {
+             if (intent.getExtras() == null) {
+                 return;
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerService.java b/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerService.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerService.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerService.java
+@@ -64,6 +64,7 @@
+ 
+     private RemoteControlClient remoteControlClient;
+     private AudioManager audioManager;
++    private boolean awaitingApiSetup;
+ 
+     private static boolean supportBigNotifications = Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN;
+     // Register only one playback backend. On modern Xiaomi ROMs the legacy
+@@ -95,6 +96,11 @@
+ 
+     @Override
+     public void onCreate() {
++        if (!ApiCredentials.isConfigured(this)) {
++            awaitingApiSetup = true;
++            super.onCreate();
++            return;
++        }
+         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+             NotificationCenter.getInstance(a).addObserver(this, NotificationCenter.messagePlayingDidSeek);
+@@ -248,6 +254,10 @@
+     @SuppressLint("NewApi")
+     @Override
+     public int onStartCommand(Intent intent, int flags, int startId) {
++        if (awaitingApiSetup) {
++            stopSelf();
++            return START_NOT_STICKY;
++        }
+         try {
+             if (intent != null && (getPackageName() + ".STOP_PLAYER").equals(intent.getAction())) {
+                 MediaController.getInstance().cleanupPlayer(true, true);
+@@ -820,6 +830,10 @@
+     @SuppressLint("NewApi")
+     @Override
+     public void onDestroy() {
++        if (awaitingApiSetup) {
++            super.onDestroy();
++            return;
++        }
+         unregisterReceiver(headsetPlugReceiver);
+         super.onDestroy();
+         stopForeground(true);
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/ExternalActionActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/ExternalActionActivity.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ExternalActionActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ExternalActionActivity.java
+@@ -69,9 +69,16 @@
+     private boolean passcodeSaveIntentIsRestore;
+ 
+     private Runnable lockRunnable;
++    private boolean awaitingApiSetup;
+ 
+     @Override
+     protected void onCreate(Bundle savedInstanceState) {
++        if (!org.telegram.messenger.ApiCredentials.isConfigured(this)) {
++            awaitingApiSetup = true;
++            super.onCreate(savedInstanceState);
++            ApiSetupRedirect.open(this);
++            return;
++        }
+         ApplicationLoader.postInitApplication();
+ 
+         requestWindowFeature(Window.FEATURE_NO_TITLE);
+@@ -508,6 +515,7 @@
+     @Override
+     protected void onPause() {
+         super.onPause();
++        if (awaitingApiSetup) return;
+         actionBarLayout.onPause();
+         if (AndroidUtilities.isTablet()) {
+             layersActionBarLayout.onPause();
+@@ -522,12 +530,14 @@
+     @Override
+     protected void onDestroy() {
+         super.onDestroy();
++        if (awaitingApiSetup) return;
+         onFinish();
+     }
+ 
+     @Override
+     protected void onResume() {
+         super.onResume();
++        if (awaitingApiSetup) return;
+         actionBarLayout.onResume();
+         if (AndroidUtilities.isTablet()) {
+             layersActionBarLayout.onResume();
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
+@@ -397,8 +397,7 @@
+         if (!org.telegram.messenger.ApiCredentials.isConfigured(this)) {
+             awaitingApiSetup = true;
+             super.onCreate(savedInstanceState);
+-            startActivity(new Intent(this, ApiSetupActivity.class));
+-            finish();
++            ApiSetupRedirect.open(this);
+             return;
+         }
+         isActive = true;
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/ShareActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/ShareActivity.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ShareActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ShareActivity.java
+@@ -36,6 +36,11 @@
+ 
+     @Override
+     protected void onCreate(Bundle savedInstanceState) {
++        if (!org.telegram.messenger.ApiCredentials.isConfigured(this)) {
++            super.onCreate(savedInstanceState);
++            ApiSetupRedirect.open(this);
++            return;
++        }
+         ApplicationLoader.postInitApplication();
+         AndroidUtilities.checkDisplaySize(this, getResources().getConfiguration());
+         AndroidUtilities.setPreferredMaxRefreshRate(getWindow());

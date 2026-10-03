@@ -1,0 +1,473 @@
+diff --git a/buildSrc/src/main/kotlin/org/telegram/plugin/TelegramBuildAppPlugin.kt b/buildSrc/src/main/kotlin/org/telegram/plugin/TelegramBuildAppPlugin.kt
+--- a/buildSrc/src/main/kotlin/org/telegram/plugin/TelegramBuildAppPlugin.kt
++++ b/buildSrc/src/main/kotlin/org/telegram/plugin/TelegramBuildAppPlugin.kt
+@@ -33,14 +33,16 @@
+                     }
+                 )
+ 
+-                localizationFiles.from(
+-                    telegramModule.fileTree("src/main/res") {
+-                        include("values-*/strings.xml")
+-                    },
+-                    project.fileTree("src/main/res") {
+-                        include("values-*/strings.xml")
+-                    }
+-                )
++                if (project.providers.gradleProperty("TG_RUNTIME_API_CONFIG").getOrElse("false") != "true") {
++                    localizationFiles.from(
++                        telegramModule.fileTree("src/main/res") {
++                            include("values-*/strings.xml")
++                        },
++                        project.fileTree("src/main/res") {
++                            include("values-*/strings.xml")
++                        }
++                    )
++                }
+ 
+                 stringsOutputDir.set(
+                     project.layout.buildDirectory.dir(
+diff --git a/buildSrc/src/main/kotlin/org/telegram/plugin/TelegramBuildPlugin.kt b/buildSrc/src/main/kotlin/org/telegram/plugin/TelegramBuildPlugin.kt
+--- a/buildSrc/src/main/kotlin/org/telegram/plugin/TelegramBuildPlugin.kt
++++ b/buildSrc/src/main/kotlin/org/telegram/plugin/TelegramBuildPlugin.kt
+@@ -19,11 +19,13 @@
+             val task = project.tasks.register<GenerateLocalizationUtilsJavaTask>(
+                 "generate${suffix}LocalizationUtilsJava"
+             ) {
+-                localizationFiles.from(
+-                    project.fileTree("src/main/res") {
+-                        include("values-*/strings.xml")
+-                    }
+-                )
++                if (project.providers.gradleProperty("TG_RUNTIME_API_CONFIG").getOrElse("false") != "true") {
++                    localizationFiles.from(
++                        project.fileTree("src/main/res") {
++                            include("values-*/strings.xml")
++                        }
++                    )
++                }
+ 
+                 javaOutputDir.set(
+                     project.layout.buildDirectory.dir(
+diff --git a/TMessagesProj/build.gradle b/TMessagesProj/build.gradle
+--- a/TMessagesProj/build.gradle
++++ b/TMessagesProj/build.gradle
+@@ -1,4 +1,21 @@
+ import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
++
++// Personal API credentials can be supplied through Gradle project properties.
++// The upstream sample remains available for local compatibility testing only.
++def personalApiId = providers.gradleProperty('TG_API_ID').orNull
++def personalApiHash = providers.gradleProperty('TG_API_HASH').orNull
++def runtimeApiConfig = providers.gradleProperty('TG_RUNTIME_API_CONFIG').getOrElse('false').toBoolean()
++if (runtimeApiConfig && (personalApiId != null || personalApiHash != null)) {
++    throw new GradleException('Public runtime-configured builds must not embed API credentials.')
++}
++if ((personalApiId == null) != (personalApiHash == null)) {
++    throw new GradleException('Supply both TG_API_ID and TG_API_HASH.')
++}
++if (personalApiId != null && (!(personalApiId ==~ /[1-9][0-9]{0,8}/) || !(personalApiHash ==~ /[a-fA-F0-9]{32}/))) {
++    throw new GradleException('Invalid Telegram API credential format.')
++}
++personalApiId = runtimeApiConfig ? '0' : (personalApiId ?: '4')
++personalApiHash = runtimeApiConfig ? '' : (personalApiHash ?: '014b35b6184100b085b0d0572f9b5103')
+ 
+ apply plugin: 'com.android.library'
+ apply plugin: 'org.telegram.build-plugin'
+@@ -142,6 +159,9 @@
+     defaultConfig {
+         minSdkVersion 21
+         targetSdkVersion 36
++        buildConfigField 'int', 'TG_API_ID', personalApiId
++        buildConfigField 'boolean', 'TG_RUNTIME_API_CONFIG', runtimeApiConfig.toString()
++        buildConfigField 'String', 'TG_API_HASH', '"' + personalApiHash + '"'
+ 
+         vectorDrawables.generatedDensities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi']
+ 
+@@ -151,6 +171,10 @@
+             cmake {
+                 version '3.22.1'
+                 arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-21' //, '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
++                if (runtimeApiConfig) {
++                    def sourceRoot = rootProject.projectDir.parentFile.absolutePath.replace('\\', '/')
++                    arguments "-DTG_PUBLIC_SOURCE_ROOT=${sourceRoot}"
++                }
+                 targets 'tmessages.49'
+             }
+         }
+diff --git a/TMessagesProj/jni/CMakeLists.txt b/TMessagesProj/jni/CMakeLists.txt
+--- a/TMessagesProj/jni/CMakeLists.txt
++++ b/TMessagesProj/jni/CMakeLists.txt
+@@ -5,6 +5,10 @@
+ set(CMAKE_CXX_EXTENSIONS OFF)
+ 
+ set(CMAKE_CXX_FLAGS "-DANDROID -g")
++if(DEFINED TG_PUBLIC_SOURCE_ROOT)
++    add_compile_options("-ffile-prefix-map=${TG_PUBLIC_SOURCE_ROOT}=/build")
++    add_compile_options("-ffile-prefix-map=${CMAKE_ANDROID_NDK}=/android-ndk")
++endif()
+ set(CMAKE_C_FLAGS "-w -std=c11 -DANDROID -D_LARGEFILE_SOURCE=1 -g -Wno-error=implicit-function-declaration")
+ set(CMAKE_ASM_FLAGS "${CFLAGS} -x assembler-with-cpp")
+ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections -fvisibility=hidden -flto=full")
+diff --git a/TMessagesProj/proguard-rules.pro b/TMessagesProj/proguard-rules.pro
+--- a/TMessagesProj/proguard-rules.pro
++++ b/TMessagesProj/proguard-rules.pro
+@@ -53,4 +53,12 @@
+ 
+ # Use -keep to explicitly keep any other classes shrinking would remove
+ #-dontoptimize
+-#-dontobfuscate
+\ No newline at end of file
++#-dontobfuscate
++# Public setup is launched through the manifest and must retain its constructor.
++-keep class org.telegram.ui.ApiSetupActivity { *; }
++# Preserve public constants for independent post-build credential verification.
++-keep class org.telegram.messenger.BuildConfig {
++    public static final int TG_API_ID;
++    public static final java.lang.String TG_API_HASH;
++    public static final boolean TG_RUNTIME_API_CONFIG;
++}
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java b/TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java
+@@ -189,7 +189,7 @@
+     }
+ 
+     public static void postInitApplication() {
+-        if (applicationInited || applicationContext == null) {
++        if (applicationInited || applicationContext == null || !ApiCredentials.isConfigured(applicationContext)) {
+             return;
+         }
+         applicationInited = true;
+@@ -289,6 +289,16 @@
+         }
+ 
+         super.onCreate();
++
++        applicationHandler = new Handler(getMainLooper());
++        initializeTelegram();
++    }
++
++    private boolean telegramRuntimeInitialized;
++
++    public synchronized void initializeTelegram() {
++        if (telegramRuntimeInitialized || !ApiCredentials.isConfigured(applicationContext)) return;
++        telegramRuntimeInitialized = true;
+ 
+         // AndroidUtilities must be initialized before FileLog
+         final String helloWorld = AndroidUtilities.getHelloWorld();
+@@ -365,6 +375,7 @@
+     });
+ 
+     public static void startPushService() {
++        if (!ApiCredentials.isConfigured(applicationContext)) return;
+         SharedPreferences preferences = MessagesController.getGlobalNotificationsSettings();
+         boolean enabled;
+         if (preferences.contains("pushService")) {
+@@ -386,6 +397,7 @@
+     @Override
+     public void onConfigurationChanged(Configuration newConfig) {
+         super.onConfigurationChanged(newConfig);
++        if (!ApiCredentials.isConfigured(applicationContext)) return;
+         try {
+             LocaleController.getInstance().onDeviceConfigurationChange(newConfig);
+             AndroidUtilities.checkDisplaySize(applicationContext, newConfig);
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java b/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+@@ -21,27 +21,27 @@
+     public static boolean DEBUG_VERSION = BuildConfig.DEBUG_VERSION;
+     public static boolean LOGS_ENABLED = BuildConfig.DEBUG_VERSION;
+     public static boolean DEBUG_PRIVATE_VERSION = BuildConfig.DEBUG_PRIVATE_VERSION;
+-    public static boolean USE_CLOUD_STRINGS = true;
+-    public static boolean CHECK_UPDATES = true;
++    public static boolean USE_CLOUD_STRINGS = !BuildConfig.TG_RUNTIME_API_CONFIG;
++    public static boolean CHECK_UPDATES = false;
+     public static boolean NO_SCOPED_STORAGE = Build.VERSION.SDK_INT <= 29;
+     public static String BUILD_VERSION_STRING = BuildConfig.BUILD_VERSION_STRING;
+ 
+-    public static int APP_ID = 4;
+-    public static String APP_HASH = "014b35b6184100b085b0d0572f9b5103";
++    public static int APP_ID = ApiCredentials.getApiId(ApplicationLoader.applicationContext);
++    public static String APP_HASH = ApiCredentials.getApiHash(ApplicationLoader.applicationContext);
+ 
+     // SafetyNet key for Google Identity SDK, set it to empty to disable
+-    public static String SAFETYNET_KEY = "AIzaSyDqt8P-7F7CPCseMkOiVRgb1LY8RN1bvH8";
++    public static String SAFETYNET_KEY = "";
+     public static String PLAYSTORE_APP_URL = "https://play.google.com/store/apps/details?id=org.telegram.messenger";
+     public static String HUAWEI_STORE_URL = "https://appgallery.huawei.com/app/C101184875";
+-    public static String GOOGLE_AUTH_CLIENT_ID = "760348033671-81kmi3pi84p11ub8hp9a1funsv0rn2p9.apps.googleusercontent.com";
++    public static String GOOGLE_AUTH_CLIENT_ID = BuildConfig.TG_RUNTIME_API_CONFIG ? "" : "760348033671-81kmi3pi84p11ub8hp9a1funsv0rn2p9.apps.googleusercontent.com";
+ 
+     public static String HUAWEI_APP_ID = "101184875";
+ 
+     // You can use this flag to disable Google Play Billing (If you're making fork and want it to be in Google Play)
+-    public static boolean IS_BILLING_UNAVAILABLE = false;
++    public static boolean IS_BILLING_UNAVAILABLE = BuildConfig.TG_RUNTIME_API_CONFIG;
+ 
+     // works only on official app ids, disable on your forks
+-    public static boolean SUPPORTS_PASSKEYS = true;
++    public static boolean SUPPORTS_PASSKEYS = false;
+ 
+     static {
+         if (ApplicationLoader.applicationContext != null) {
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerService.java b/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerService.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerService.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerService.java
+@@ -66,7 +66,9 @@
+     private AudioManager audioManager;
+ 
+     private static boolean supportBigNotifications = Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN;
+-    private static boolean supportLockScreenControls = Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP || !TextUtils.isEmpty(AndroidUtilities.getSystemProperty("ro.miui.ui.version.code"));
++    // Register only one playback backend. On modern Xiaomi ROMs the legacy
++    // RemoteControlClient creates an additional session competing with MediaSession.
++    private static boolean supportLockScreenControls = Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP;
+ 
+     private MediaSessionCompat mediaSession;
+     private PlaybackStateCompat.Builder playbackState;
+@@ -112,7 +114,15 @@
+         });
+ 
+         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+-            mediaSession = new MediaSessionCompat(this, "telegramAudioPlayer");
++            // The manifest also contains the VoIP media-button receiver, so automatic
++            // receiver discovery is ambiguous. Bind playback buttons explicitly.
++            ComponentName mediaButtonReceiver = new ComponentName(this, MusicPlayerReceiver.class);
++            Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON).setComponent(mediaButtonReceiver);
++            PendingIntent mediaButtonPendingIntent = PendingIntent.getBroadcast(this, 0,
++                    mediaButtonIntent, PendingIntent.FLAG_UPDATE_CURRENT
++                            | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? PendingIntent.FLAG_MUTABLE : 0));
++            mediaSession = new MediaSessionCompat(this, "telegramAudioPlayer", mediaButtonReceiver, mediaButtonPendingIntent);
++            mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS | MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+             playbackState = new PlaybackStateCompat.Builder();
+             albumArtPlaceholder = Bitmap.createBitmap(AndroidUtilities.dp(102), AndroidUtilities.dp(102), Bitmap.Config.ARGB_8888);
+             Drawable placeholder = getResources().getDrawable(R.drawable.nocover_big);
+@@ -865,4 +875,4 @@
+             }
+         }
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/pip/PipActivityController.java b/TMessagesProj/src/main/java/org/telegram/messenger/pip/PipActivityController.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/pip/PipActivityController.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/pip/PipActivityController.java
+@@ -154,7 +154,7 @@
+                 // Log.i(PipSource.TAG, "[MEDIA] stop media session");
+             }
+ 
+-            if (newSource != null) {
++            if (newMediaSession) {
+                 mediaSession = new MediaSession.Builder(activity, newSource.player)
+                         .setId("pip-media-session")
+                         .build();
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/PushListenerController.java b/TMessagesProj/src/main/java/org/telegram/messenger/PushListenerController.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/PushListenerController.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/PushListenerController.java
+@@ -1719,6 +1719,7 @@
+ 
+         @Override
+         public boolean hasServices() {
++            if (BuildConfig.TG_RUNTIME_API_CONFIG) return false;
+             if (hasServices == null) {
+                 try {
+                     int resultCode = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(ApplicationLoader.applicationContext);
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/Components/AlertsCreator.java b/TMessagesProj/src/main/java/org/telegram/ui/Components/AlertsCreator.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Components/AlertsCreator.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/AlertsCreator.java
+@@ -549,7 +549,7 @@
+             } else {
+                 return showSimpleAlert(fragment, error.text);
+             }
+-        } else if (request instanceof TLRPC.TL_auth_resendCode) {
++        } else if (request instanceof TLRPC.TL_auth_sendCode || request instanceof TLRPC.TL_auth_resendCode) {
+             if (error.text.contains("PHONE_NUMBER_INVALID")) {
+                 return showSimpleAlert(fragment, LocaleController.getString(R.string.InvalidPhoneNumber));
+             } else if (error.text.contains("PHONE_CODE_EMPTY") || error.text.contains("PHONE_CODE_INVALID")) {
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
+@@ -391,8 +391,17 @@
+     private FrameMetricsOverlayView frameMetricsOverlayView;
+     // private RefreshRateController refreshRateController;
+ 
++    private boolean awaitingApiSetup;
++
+     @Override
+     protected void onCreate(Bundle savedInstanceState) {
++        if (!org.telegram.messenger.ApiCredentials.isConfigured(this)) {
++            awaitingApiSetup = true;
++            super.onCreate(savedInstanceState);
++            startActivity(new Intent(this, ApiSetupActivity.class));
++            finish();
++            return;
++        }
+         isActive = true;
+         activeInstanceCount++;
+         if (BuildVars.DEBUG_VERSION) {
+@@ -6852,6 +6861,10 @@
+ 
+     @Override
+     protected void onDestroy() {
++        if (awaitingApiSetup) {
++            super.onDestroy();
++            return;
++        }
+         isActive = false;
+         activeInstanceCount--;
+         unregisterReceiver(batteryReceiver);
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/PhotoViewer.java b/TMessagesProj/src/main/java/org/telegram/ui/PhotoViewer.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/PhotoViewer.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/PhotoViewer.java
+@@ -146,6 +146,8 @@
+ import androidx.recyclerview.widget.RecyclerView;
+ 
+ import androidx.media3.common.C;
++import androidx.media3.common.Player;
++import androidx.media3.session.MediaSession;
+ import androidx.media3.exoplayer.ExoPlayer;
+ import androidx.media3.common.Format;
+ import androidx.media3.exoplayer.analytics.AnalyticsListener;
+@@ -349,6 +351,8 @@
+ @SuppressWarnings("unchecked")
+ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegate, GestureDetector2.OnGestureListener, GestureDetector2.OnDoubleTapListener, IPipSourceDelegate, FactorAnimator.Target {
+ 
++    private MediaSession videoMediaSession;
++
+     private static final int ANIMATOR_ID_POLL_ATTACH_BUTTONS_VISIBLE = 0;
+     private final BoolAnimator animatorPollAttachButtonsVisibility = new BoolAnimator(ANIMATOR_ID_POLL_ATTACH_BUTTONS_VISIBLE, this, CubicBezierInterpolator.EASE_OUT_QUINT, 380);
+ 
+@@ -10334,6 +10338,8 @@
+     }
+ 
+     private void preparePlayer(ArrayList<VideoPlayer.Quality> videoUrises, Uri uri, boolean playWhenReady, boolean preview, MediaController.SavedFilterState savedFilterState, boolean livePhoto, long videoByteOffset) {
++        final boolean useVideoMediaSession = !preview && !livePhoto && imagesArrLocals.isEmpty()
++                && currentMessageObject != null && currentMessageObject.isVideo() && !currentMessageObject.isSecretMedia();
+         if (!preview) {
+             currentPlayingVideoFile = uri;
+             currentPlayingVideoQualityFiles = videoUrises;
+@@ -10482,7 +10488,8 @@
+                         .setTagPrefix("photo-viewer-" + videoPlayer.playerId)
+                         .setContentView(aspectRatioFrameLayout)
+                         .setPlaceholderView(pipPlaceholderView)
+-                        .setNeedMediaSession(true)
++                        // PhotoViewer owns the session even while paused or outside PiP.
++                        .setNeedMediaSession(!useVideoMediaSession)
+                         .build();
+                 }
+                 newPlayerCreated = true;
+@@ -10728,6 +10735,31 @@
+             }
+         }
+ 
++        if (useVideoMediaSession && videoPlayer != null && videoPlayer.player != null) {
++            // Keep the same session while paused and in PiP. Each viewer can own a
++            // different player, so Media3 session IDs must be unique per player.
++            videoMediaSession = new MediaSession.Builder(parentActivity, videoPlayer.player)
++                    .setId("telegram-video-" + videoPlayer.playerId)
++                    .setCallback(new MediaSession.Callback() {
++                        @Override
++                        public MediaSession.ConnectionResult onConnect(MediaSession session, MediaSession.ControllerInfo controller) {
++                            Player.Commands commands = new Player.Commands.Builder()
++                                    .add(Player.COMMAND_PLAY_PAUSE)
++                                    .add(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
++                                    .add(Player.COMMAND_SEEK_BACK)
++                                    .add(Player.COMMAND_SEEK_FORWARD)
++                                    .add(Player.COMMAND_GET_CURRENT_MEDIA_ITEM)
++                                    .add(Player.COMMAND_GET_METADATA)
++                                    .add(Player.COMMAND_GET_TIMELINE)
++                                    .build();
++                            return new MediaSession.ConnectionResult.AcceptedResultBuilder(session)
++                                    .setAvailablePlayerCommands(commands)
++                                    .build();
++                        }
++                    })
++                    .build();
++        }
++
+         Boolean savedLooping = VideoPlayer.getLooping(currentMessageObject);
+         if (livePhoto) {
+             playerLooping = false;
+@@ -10946,6 +10978,10 @@
+     }
+ 
+     private void releasePlayer(boolean onClose) {
++        if (videoMediaSession != null) {
++            videoMediaSession.release();
++            videoMediaSession = null;
++        }
+         usedSurfaceView = false;
+         if (pipSource != null) {
+             pipSource.destroy();
+diff --git a/TMessagesProj_AppStandalone/build.gradle b/TMessagesProj_AppStandalone/build.gradle
+--- a/TMessagesProj_AppStandalone/build.gradle
++++ b/TMessagesProj_AppStandalone/build.gradle
+@@ -1,3 +1,8 @@
++def publicRuntimeConfig = providers.gradleProperty('TG_RUNTIME_API_CONFIG').getOrElse('false').toBoolean()
++if (publicRuntimeConfig && (!providers.gradleProperty('TG_SIGNING_KEYSTORE').isPresent() || !providers.environmentVariable('TG_SIGNING_PASSWORD').isPresent())) {
++    throw new GradleException('Public builds require a private external signing key and TG_SIGNING_PASSWORD.')
++}
++
+ apply plugin: 'com.android.application'
+ apply plugin: 'org.telegram.build-app-plugin'
+ 
+@@ -58,10 +63,10 @@
+         }
+ 
+         release {
+-            storeFile file("../TMessagesProj/config/release.keystore")
+-            storePassword RELEASE_STORE_PASSWORD
+-            keyAlias RELEASE_KEY_ALIAS
+-            keyPassword RELEASE_KEY_PASSWORD
++            storeFile file(providers.gradleProperty('TG_SIGNING_KEYSTORE').getOrElse("../TMessagesProj/config/release.keystore"))
++            storePassword providers.environmentVariable('TG_SIGNING_PASSWORD').getOrElse(RELEASE_STORE_PASSWORD)
++            keyAlias providers.gradleProperty('TG_SIGNING_ALIAS').getOrElse(RELEASE_KEY_ALIAS)
++            keyPassword providers.environmentVariable('TG_SIGNING_PASSWORD').getOrElse(RELEASE_KEY_PASSWORD)
+         }
+     }
+ 
+@@ -94,7 +99,10 @@
+         manifest.srcFile '../TMessagesProj/config/release/AndroidManifest_standalone.xml'
+     }
+     sourceSets.standalone {
+-        manifest.srcFile '../TMessagesProj/config/release/AndroidManifest_standalone.xml'
++        manifest.srcFile publicRuntimeConfig ? 'src/public/AndroidManifest.xml' : '../TMessagesProj/config/release/AndroidManifest_standalone.xml'
++        if (providers.gradleProperty('TG_RUNTIME_API_CONFIG').getOrElse('false').toBoolean()) {
++            res.srcDir 'src/public/res'
++        }
+     }
+ 
+     flavorDimensions "minApi"
+@@ -102,13 +110,13 @@
+     productFlavors {
+         afat {
+             ndk {
+-                abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
++                abiFilters "arm64-v8a"
+             }
+             ext {
+                 abiVersionCode = 9
+             }
+             sourceSets.standalone {
+-                manifest.srcFile '../TMessagesProj/config/release/AndroidManifest_standalone.xml'
++                manifest.srcFile publicRuntimeConfig ? 'src/public/AndroidManifest.xml' : '../TMessagesProj/config/release/AndroidManifest_standalone.xml'
+             }
+         }
+     }
+@@ -119,6 +127,9 @@
+         variant.outputs.all { output ->
+             outputFileName = "app.apk"
+             output.versionCodeOverride = defaultConfig.versionCode * 10 + variant.productFlavors.get(0).abiVersionCode
++            if (variant.buildType.name == 'standalone' && project.hasProperty('PERSONAL_VERSION_CODE')) {
++                output.versionCodeOverride = Integer.parseInt(project.property('PERSONAL_VERSION_CODE'))
++            }
+         }
+     }
+ 
+@@ -158,4 +169,6 @@
+     }
+ }
+ 
+-apply plugin: 'com.google.gms.google-services'
++if (!providers.gradleProperty('TG_RUNTIME_API_CONFIG').getOrElse('false').toBoolean()) {
++    apply plugin: 'com.google.gms.google-services'
++}
