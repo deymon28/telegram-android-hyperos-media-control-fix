@@ -1,5 +1,53 @@
 # Release validation
 
+## 13.0.2-hyperos.1
+
+Checked on 2026-10-17 against official Telegram commit
+`f32ffeec763f0bdbf4bec25b52d654f77bff733d` (13.0.2, upstream code 7175).
+
+APK SHA-256: `e5a98b0d1008c53491aee0278ed991877edb4135695cd0926e8d50dc485662c0`
+
+### Build and artifact evidence
+
+- The complete Windows release build succeeded: 334 Gradle tasks, 11 minutes 21 seconds,
+  with the same toolchain as 12.10.6 (JDK 21, Gradle 8.13, SDK 36, Build Tools 36.0.0 and
+  35.0.0, NDK 27.2.12479018, CMake 3.22.1).
+- Package `org.telegram.tgmedia.web`, version code `717501`, ABI `arm64-v8a`, minimum
+  Android 6.0. It is signed with the same `CN=TG Media Release` certificate as 12.10.6, so it
+  installs over that release and keeps its login.
+- Signature (v1 and v2), 16 KB ZIP alignment, manifest flags, compiled API setup, empty
+  compiled API credentials, ARM64 ELF, local-path, and English-only localization checks
+  passed. The APK contains 7,342 ZIP entries.
+
+### Source and regression evidence
+
+- 20 upstream archives (19 pinned submodules) were downloaded and verified; both patches
+  applied. Preparation recorded 48,611 file hashes, checked before compiling and packaging.
+- All 108 host tests passed on the prepared source. New tests compile the media-button
+  marker against Android API stubs and drive 11 ownership transitions, check that the music
+  service drives and releases it, check idle in-chat sound release, and cover content-pinned
+  googlesource archives and unattended `--skip-built` runs.
+- The Git inputs, APK, and 48,648-entry corresponding-source archive were checked locally
+  against private credentials, signing secrets, identity markers, and device markers. No
+  matches were found.
+
+### Device evidence
+
+Installed over 12.10.6-hyperos.2 on a Xiaomi 14T (HyperOS 3, Android 16) with Realme Buds
+Air 8 Pro and Huawei Watch GT 6. The existing login and chats were kept.
+
+- Official Telegram was running with an idle in-chat `SoundPool` reported as an active
+  player, the condition that previously moved headset buttons to it after a pause.
+  `dumpsys media_session` kept TG Media as the media button session through repeated
+  pause and resume cycles; five consecutive headset play/pause commands reached TG Media.
+- When YouTube Music started playback, the media button session moved to it and later
+  headset commands reached YouTube Music, so TG Media yields accessory controls.
+- The tester reported normal behavior. Full-screen video and picture-in-picture controls
+  on 13.0.2 were not separately recorded.
+
+If HyperOS "play audio from multiple apps" is enabled, apps are not asked to pause when
+another app starts playback; this is a system setting, not TG Media behavior.
+
 ## 12.10.6-hyperos.2
 
 Checked on 2026-10-03 against official Telegram commit

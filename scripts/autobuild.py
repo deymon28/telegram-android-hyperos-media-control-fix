@@ -17,7 +17,7 @@ import tempfile
 import threading
 import zipfile
 
-from source_tools import ROOT, SourceError, digest, extract, prepare, request, resolve_ref, verify_prepared
+from source_tools import ROOT, SourceError, digest, extract, prepare, project_inputs, request, resolve_ref, verify_prepared
 
 
 class BuildError(RuntimeError):
@@ -109,6 +109,27 @@ def version(source: Path, revision: int, name=None, code=None):
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.-]{0,79}", name) or not 0 < code <= 2100000000:
         raise BuildError("Invalid release version name or Android version code.")
     return name, code
+
+
+def next_revision(source: Path, output: Path) -> int:
+    upstream = properties(source / "gradle.properties")["APP_VERSION_NAME"]
+    for revision in range(1, 100):
+        if not (output / f"TG-Media-{upstream}-hyperos.{revision}").exists():
+            return revision
+    raise BuildError("No free release revision remains for this upstream version.")
+
+
+def built_release(output: Path, upstream_commit: str):
+    """Return an existing release of this upstream commit built from the current patches."""
+    inputs = project_inputs(ROOT)
+    for path in sorted(output.glob("TG-Media-*/build-provenance.json")):
+        try:
+            provenance = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if provenance.get("upstream_commit") == upstream_commit and provenance.get("patch_inputs") == inputs:
+            return path.parent
+    return None
 
 
 def environment() -> dict:
@@ -261,7 +282,8 @@ def build(source: Path, args, env: dict) -> Path:
         raise BuildError("Keep the signing key outside this repository and all downloaded source trees.")
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", args.key_alias):
         raise BuildError("Invalid signing key alias.")
-    name, code = version(source, args.revision, args.version_name, args.version_code)
+    revision = args.revision or next_revision(source, args.output)
+    name, code = version(source, revision, args.version_name, args.version_code)
     sdk = Path(env["ANDROID_HOME"])
     build_tools = sdk / "build-tools" / args.build_tools
     exe = ".bat" if os.name == "nt" else ""
@@ -342,6 +364,8 @@ def parser():
     mode.add_argument("--locked", nargs="?", type=Path, const=ROOT / "sources.lock.json", help="Use reviewed or supplied source lock")
     mode.add_argument("--prepared-source", type=Path, help="Reuse a previously verified preparation inventory")
     result.add_argument("--prepare-only", action="store_true", help="Download and patch without building")
+    result.add_argument("--skip-built", action="store_true",
+                        help="Exit successfully when this upstream commit was already built from the current patches")
     result.add_argument("--cache", type=Path, default=ROOT / ".cache")
     result.add_argument("--work-dir", type=Path, default=ROOT / ".work")
     result.add_argument("--output", type=Path, default=ROOT / "dist")
@@ -349,7 +373,8 @@ def parser():
     result.add_argument("--key-alias", default="tgmedia")
     result.add_argument("--gradle", help="Path to installed Gradle executable")
     result.add_argument("--build-tools", default="36.0.0")
-    result.add_argument("--revision", type=int, choices=range(1, 100), default=2, metavar="1..99")
+    result.add_argument("--revision", type=int, choices=range(1, 100), metavar="1..99",
+                        help="Release revision for this upstream version (default: next unused)")
     result.add_argument("--version-name")
     result.add_argument("--version-code", type=int)
     result.add_argument("--workers", type=int, choices=range(1, 17), default=4, metavar="1..16")
@@ -370,6 +395,10 @@ def main():
                 verify_prepared(source)
         else:
             ref = resolve_ref(args.ref) if not args.locked else "locked"
+            existing = built_release(args.output, ref) if args.skip_built and not args.locked else None
+            if existing:
+                print(f"UP-TO-DATE: {existing.name} already contains official {ref[:12]} with the current patches.", flush=True)
+                return 0
             stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
             source = args.work_dir.resolve() / f"{ref[:12]}-{stamp}" / "Telegram"
             prepare(source, args.cache.resolve(), ref=ref, lock=args.locked)

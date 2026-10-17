@@ -1,21 +1,21 @@
 [
   {
     "repository": "DrKLO/Telegram",
-    "revision": "f2908b14133bbffbf7ab04f641ecb5bfaf533242",
+    "revision": "f32ffeec763f0bdbf4bec25b52d654f77bff733d",
     "path": ".",
-    "filename": "DrKLO-Telegram-f2908b14133bbffbf7ab04f641ecb5bfaf533242.zip",
+    "filename": "DrKLO-Telegram-f32ffeec763f0bdbf4bec25b52d654f77bff733d.zip",
     "format": "zip",
-    "url": "https://codeload.github.com/DrKLO/Telegram/zip/f2908b14133bbffbf7ab04f641ecb5bfaf533242",
-    "sha256": "518db33193c2df042ed645864f84457d7d1ee240209c746eaa070ed18db42980"
+    "url": "https://codeload.github.com/DrKLO/Telegram/zip/f32ffeec763f0bdbf4bec25b52d654f77bff733d",
+    "sha256": "d9dd56d717cfb34b8581fcdd6689f60e5e84b4d3cddcced69fa84080847eeb90"
   },
   {
     "repository": "dkaraush/tlottie",
-    "revision": "92df98dc209bc39b1e567ec74a8c86a0af5239de",
+    "revision": "31f1b542f88e7b4be9a01e749920d857535fc715",
     "path": "TMessagesProj/jni/tlottie",
-    "filename": "dkaraush-tlottie-92df98dc209bc39b1e567ec74a8c86a0af5239de.zip",
+    "filename": "dkaraush-tlottie-31f1b542f88e7b4be9a01e749920d857535fc715.zip",
     "format": "zip",
-    "url": "https://codeload.github.com/dkaraush/tlottie/zip/92df98dc209bc39b1e567ec74a8c86a0af5239de",
-    "sha256": "20865dfed140c76def02f894abc22bbde135ef6f355453cec6eeeffd83913c16"
+    "url": "https://codeload.github.com/dkaraush/tlottie/zip/31f1b542f88e7b4be9a01e749920d857535fc715",
+    "sha256": "4a76644eab08c42ee74ec7b2d0f9a57be6670958e0e8753ed95f0989ef26310a"
   },
   {
     "repository": "webmproject/libvpx",
@@ -86,8 +86,8 @@
     "path": "TMessagesProj/jni/third_party/libyuv",
     "filename": "libyuv.tar.gz",
     "url": "https://chromium.googlesource.com/libyuv/libyuv/+archive/28ce69c2744a6aafdb58564e7b884aec3f66be5f.tar.gz",
-    "sha256": "6d73ebd89ac7e5d9e402aad7050bef060e344d50344ba9151eaedadc7b172fa2",
-    "format": "tar.gz"
+    "format": "tar.gz",
+    "content_sha256": "512095b1db4c0a2e2c6c4a7357453502c21facfa4e7755218e5770962bea8a3c"
   },
   {
     "repository": "cisco/openh264",
@@ -142,5 +142,41 @@
     "format": "zip",
     "url": "https://codeload.github.com/wasm-micro-runtime/wasm-micro-runtime/zip/25bd7eb63e828e4bd242cc9b38d260b4b31c6605",
     "sha256": "4fbc793e6a1171c969cb6f8094feb94b9338ea00944676a218a7e4aa3afac77a"
+  },
+  {
+    "repository": "TelegramMessenger/tgcalls",
+    "revision": "ccbb57965020768c94f5b205ea08547a7e0fe49d",
+    "path": "TMessagesProj/jni/tgcalls",
+    "filename": "TelegramMessenger-tgcalls-ccbb57965020768c94f5b205ea08547a7e0fe49d.zip",
+    "format": "zip",
+    "url": "https://codeload.github.com/TelegramMessenger/tgcalls/zip/ccbb57965020768c94f5b205ea08547a7e0fe49d",
+    "sha256": "6df049db93f271a4cae28337982184484aaaf04fb2d88cb2ba9e333893db76be"
+  },
+  {
+    "repository": "dkaraush/wallet-engine",
+    "revision": "5c65e47cb8d68727c20d89382d0bc51292486b9a",
+    "path": "TMessagesProj/jni/wallet-engine",
+    "filename": "dkaraush-wallet-engine-5c65e47cb8d68727c20d89382d0bc51292486b9a.zip",
+    "format": "zip",
+    "url": "https://codeload.github.com/dkaraush/wallet-engine/zip/5c65e47cb8d68727c20d89382d0bc51292486b9a",
+    "sha256": "b60a80fd27352104d5bf774d26360b04d6feaff87e9849246d4f10fa881032f0"
+  },
+  {
+    "repository": "boostorg/regex",
+    "revision": "4cbcd3078e6ae10d05124379623a1bf03fcb9350",
+    "path": "TMessagesProj/jni/third_party/boost-regex",
+    "filename": "boostorg-regex-4cbcd3078e6ae10d05124379623a1bf03fcb9350.zip",
+    "format": "zip",
+    "url": "https://codeload.github.com/boostorg/regex/zip/4cbcd3078e6ae10d05124379623a1bf03fcb9350",
+    "sha256": "c9f61f4e983f14a10c2cf6e86b89860b8c5ea5082baa18af8a5e7507b39fbe96"
+  },
+  {
+    "repository": "TelegramMessenger/libprisma",
+    "revision": "31a5d6fbbef8136e4a2b3adaf7b95e2ccaa7436d",
+    "path": "TMessagesProj/jni/third_party/libprisma",
+    "filename": "TelegramMessenger-libprisma-31a5d6fbbef8136e4a2b3adaf7b95e2ccaa7436d.zip",
+    "format": "zip",
+    "url": "https://codeload.github.com/TelegramMessenger/libprisma/zip/31a5d6fbbef8136e4a2b3adaf7b95e2ccaa7436d",
+    "sha256": "9a5f6b1fd1470f980df514a8d39f2bf8c52e866708c12ca112fbf5107879af12"
   }
 ]

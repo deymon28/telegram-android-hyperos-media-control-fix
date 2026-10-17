@@ -18,6 +18,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
+import zlib
 
 ROOT = Path(__file__).resolve().parents[1]
 UPSTREAM = "DrKLO/Telegram"
@@ -32,6 +33,22 @@ class SourceError(RuntimeError):
 def digest(path: Path) -> str:
     with path.open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def tree_digest(archive: Path) -> str:
+    """Hash TAR contents; googlesource regenerates archive bytes on every download."""
+    result = hashlib.sha256(b"tg-media-tree-v1\0")
+    try:
+        with tarfile.open(archive, "r:gz") as source:
+            for item in sorted(source.getmembers(), key=lambda member: member.name):
+                kind = b"d" if item.isdir() else b"f" if item.isfile() else b"x"
+                result.update(item.name.encode("utf-8") + b"\0" + kind + b"\0")
+                if item.isfile():
+                    with source.extractfile(item) as stream:
+                        result.update(hashlib.file_digest(stream, "sha256").digest())
+    except (tarfile.TarError, EOFError, zlib.error):
+        raise SourceError("Source TAR archive is corrupt.") from None
+    return result.hexdigest()
 
 
 def request(url: str):
@@ -204,9 +221,12 @@ def validate_entry(entry: dict) -> None:
         raise SourceError("Archive cache names must be simple filenames.")
     if entry["format"] not in {"zip", "tar.gz"}:
         raise SourceError("Unsupported locked source format.")
-    expected = entry.get("sha256")
-    if expected is not None and not re.fullmatch(r"[0-9a-f]{64}", expected):
-        raise SourceError("Invalid locked SHA-256 digest.")
+    for key in ("sha256", "content_sha256"):
+        expected = entry.get(key)
+        if expected is not None and not re.fullmatch(r"[0-9a-f]{64}", expected):
+            raise SourceError("Invalid locked SHA-256 digest.")
+    if "content_sha256" in entry and entry["format"] != "tar.gz":
+        raise SourceError("Content digests are only used for regenerated TAR archives.")
     if entry["repository"] == "libyuv":
         url = f"https://chromium.googlesource.com/libyuv/libyuv/+archive/{entry['revision']}.tar.gz"
     elif REPO.fullmatch(entry["repository"]):
@@ -220,8 +240,15 @@ def validate_entry(entry: dict) -> None:
 def download(entry: dict, cache: Path) -> Path:
     validate_entry(entry)
     cache.mkdir(parents=True, exist_ok=True)
-    archive, expected = cache / entry["filename"], entry.get("sha256")
-    checksum_file = archive.with_suffix(archive.suffix + ".sha256")
+    archive = cache / entry["filename"]
+    # GitHub archives are byte-stable. googlesource TAR bytes differ per request,
+    # so those archives are pinned by their extracted file contents instead.
+    by_content = entry["format"] == "tar.gz"
+    key = "content_sha256" if by_content else "sha256"
+    measure = tree_digest if by_content else digest
+    expected = entry.get(key)
+    legacy = entry.pop("sha256", None) if by_content else None
+    checksum_file = archive.with_suffix(archive.suffix + (".content-sha256" if by_content else ".sha256"))
     if archive.exists():
         if not expected and checksum_file.is_file():
             expected = checksum_file.read_text(encoding="ascii").strip()
@@ -229,19 +256,23 @@ def download(entry: dict, cache: Path) -> Path:
                 raise SourceError("Invalid cached source checksum sidecar.")
         if not expected:
             raise SourceError("Cached source has no expected digest; use a generated lock file or a fresh cache.")
-        if digest(archive) != expected:
+        if measure(archive) != expected:
             raise SourceError("Cached source checksum mismatch; remove the affected archive and retry.")
-        entry["sha256"] = expected
+        entry[key] = expected
         return archive
+    if legacy and not expected:
+        # Older locks recorded only the bytes of one googlesource response.
+        raise SourceError("This lock pins a regenerated googlesource archive by bytes only. "
+                          "Add its content_sha256 from a reviewed lock before building.")
     partial = archive.with_suffix(archive.suffix + ".part")
     print(f"Downloading {entry['repository']} at {entry['revision']}", flush=True)
     try:
         with request(entry["url"]) as response, partial.open("wb") as dst:
             shutil.copyfileobj(response, dst, length=1024 * 1024)
-        actual = digest(partial)
+        actual = measure(partial)
         if expected and actual != expected:
             raise SourceError("Downloaded source checksum mismatch.")
-        entry["sha256"] = actual
+        entry[key] = actual
         os.replace(partial, archive)
         checksum_file.write_text(actual + "\n", encoding="ascii")
     finally:
@@ -371,7 +402,7 @@ def prepare(target: Path, cache: Path, *, ref: str = "latest", lock: Path | None
         raise SourceError("The first lock entry must be the official Telegram root.")
     for item in entries:
         validate_entry(item)
-        if lock and not item.get("sha256"):
+        if lock and not item.get("content_sha256" if item["format"] == "tar.gz" else "sha256"):
             raise SourceError("Locked source must include a checksum for every archive.")
     target.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".preparing-", dir=target.parent) as folder:

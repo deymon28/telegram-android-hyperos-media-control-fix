@@ -439,6 +439,67 @@ class DownloadTest(WorkspaceTest):
         self.assertFalse(list(cache.glob("*.part")))
 
 
+class RegeneratedTarDownloadTest(WorkspaceTest):
+    def tar_entry(self, **fields):
+        return dict({
+            "repository": "libyuv", "revision": MODULE_REVISION, "path": "jni/libyuv",
+            "filename": "libyuv.tar.gz", "format": "tar.gz",
+            "url": f"https://chromium.googlesource.com/libyuv/libyuv/+archive/{MODULE_REVISION}.tar.gz",
+        }, **fields)
+
+    def regenerated(self, content=b"same file\n", mtime=0):
+        # googlesource returns different gzip and TAR metadata for identical trees.
+        result = io.BytesIO()
+        with tarfile.open(fileobj=result, mode="w:gz") as archive:
+            item = tarfile.TarInfo("include/file.h")
+            item.size, item.mtime = len(content), mtime
+            archive.addfile(item, io.BytesIO(content))
+        return result.getvalue()
+
+    def test_identical_trees_with_different_archive_bytes_share_one_digest(self):
+        first, second = self.work / "first.tar.gz", self.work / "second.tar.gz"
+        first.write_bytes(self.regenerated(mtime=1))
+        second.write_bytes(self.regenerated(mtime=2))
+        self.assertNotEqual(first.read_bytes(), second.read_bytes())
+        self.assertEqual(source_tools.tree_digest(first), source_tools.tree_digest(second))
+
+    def test_locked_content_digest_accepts_a_regenerated_archive(self):
+        reference = self.work / "reference.tar.gz"
+        reference.write_bytes(self.regenerated(mtime=1))
+        source = self.tar_entry(content_sha256=source_tools.tree_digest(reference))
+        with mock.patch.object(source_tools, "request", return_value=io.BytesIO(self.regenerated(mtime=2))):
+            archive = source_tools.download(source, self.work / "cache")
+        self.assertTrue(archive.is_file())
+        self.assertNotIn("sha256", source)
+
+    def test_changed_tree_content_is_rejected(self):
+        reference = self.work / "reference.tar.gz"
+        reference.write_bytes(self.regenerated())
+        source = self.tar_entry(content_sha256=source_tools.tree_digest(reference))
+        cache = self.work / "cache"
+        with mock.patch.object(source_tools, "request", return_value=io.BytesIO(self.regenerated(b"changed\n"))):
+            with self.assertRaises(source_tools.SourceError):
+                source_tools.download(source, cache)
+        self.assertEqual(list(cache.iterdir()), [])
+
+    def test_byte_only_tar_lock_requires_review_instead_of_trusting_a_download(self):
+        source = self.tar_entry(sha256="0" * 64)
+        with mock.patch.object(source_tools, "request") as request:
+            with self.assertRaises(source_tools.SourceError):
+                source_tools.download(source, self.work / "cache")
+        request.assert_not_called()
+
+    def test_corrupt_tar_is_a_source_error(self):
+        broken = self.work / "broken.tar.gz"
+        broken.write_bytes(b"not a gzip archive")
+        with self.assertRaises(source_tools.SourceError):
+            source_tools.tree_digest(broken)
+
+    def test_content_digest_is_rejected_for_github_archives(self):
+        with self.assertRaises(source_tools.SourceError):
+            source_tools.validate_entry(dict(entry(), content_sha256="0" * 64))
+
+
 class SubmoduleTest(WorkspaceTest):
     def write_modules(self, modules):
         text = "".join(

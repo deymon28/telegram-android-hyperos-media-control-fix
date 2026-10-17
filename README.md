@@ -2,8 +2,8 @@
 
 An unofficial Telegram Android client with media-control fixes for headphones and
 watches on HyperOS, plus a current-upstream APK autobuilder. The reviewed baseline
-is Telegram 12.10.6 at commit
-[`f2908b14133bbffbf7ab04f641ecb5bfaf533242`](https://github.com/DrKLO/Telegram/tree/f2908b14133bbffbf7ab04f641ecb5bfaf533242).
+is Telegram 13.0.2 at commit
+[`f32ffeec763f0bdbf4bec25b52d654f77bff733d`](https://github.com/DrKLO/Telegram/tree/f32ffeec763f0bdbf4bec25b52d654f77bff733d).
 
 TG Media uses the separate package `org.telegram.tgmedia.web` and can be installed
 alongside official Telegram. It has its own account sessions and local data.
@@ -20,7 +20,10 @@ alongside official Telegram. It has its own account sessions and local data.
 
 The public APK contains no maintainer API credentials. API credentials are
 separate from your phone number, login code, and two-step verification password.
-Never post any of them in an issue. ARM64 Android 5.0 or newer is required.
+Never post any of them in an issue. ARM64 Android 6.0 or newer is required.
+
+Later releases install over an existing TG Media installation and keep its login,
+because every release uses the same package and signing certificate.
 
 ## Build the latest official source
 
@@ -38,6 +41,12 @@ Use `--locked` for the reviewed source version. Publication remains a manual ste
 
 - Use a modern audio media session on Xiaomi devices without competing legacy
   registrations, and keep paused playback available to external controls.
+- Keep headset play working after a pause when another app, such as official
+  Telegram after an in-chat sound, holds an idle sound player. Android routes media
+  buttons to any app with an active player, so a paused TG Media track keeps a
+  silent marker until another app starts media playback.
+- Release in-chat sound players after five idle seconds, so TG Media itself does
+  not take headset buttons from other media apps.
 - Give eligible full-screen videos a media session and preserve ownership during
   picture-in-picture transitions.
 - Show initial login API errors instead of silently ignoring them.
@@ -48,9 +57,8 @@ Use `--locked` for the reviewed source version. Publication remains a manual ste
   Firebase initialization, Google authentication, and the sample map key are
   disabled or omitted. Push and map behavior can differ from official Telegram.
 
-The current Media3-based build is a prerelease without physical device validation.
-Android chooses the active session system-wide;
-another media app can still capture accessory controls. See [VALIDATION.md](VALIDATION.md)
+Android chooses the active media session system-wide; an app that starts
+playback takes accessory controls, as intended. See [VALIDATION.md](VALIDATION.md)
 for the exact evidence and remaining device checks, [PRIVACY.md](PRIVACY.md) for
 configuration handling, and [CHANGELOG.md](CHANGELOG.md) for changes.
 

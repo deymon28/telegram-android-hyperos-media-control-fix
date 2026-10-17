@@ -1,7 +1,8 @@
 diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserService.java b/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserService.java
+index e5c909e..5ffddb8 100644
 --- a/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserService.java
 +++ b/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserService.java
-@@ -29,6 +29,7 @@
+@@ -30,6 +30,7 @@ public class MusicBrowserService extends MediaBrowserService {
      @Override
      public void onCreate() {
          super.onCreate();
@@ -9,7 +10,7 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserServ
          ApplicationLoader.postInitApplication();
          TelegramMediaSession holder = TelegramMediaSession.getInstance(this);
          setSessionToken(holder.getFrameworkSessionToken());
-@@ -42,6 +43,7 @@
+@@ -43,6 +44,7 @@ public class MusicBrowserService extends MediaBrowserService {
      @Nullable
      @Override
      public BrowserRoot onGetRoot(String clientPackageName, int clientUid, Bundle rootHints) {
@@ -17,7 +18,7 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserServ
          if (clientPackageName == null) {
              return null;
          }
-@@ -57,6 +59,10 @@
+@@ -58,6 +60,10 @@ public class MusicBrowserService extends MediaBrowserService {
  
      @Override
      public void onLoadChildren(@NonNull String parentMediaId, @NonNull Result<List<MediaBrowser.MediaItem>> result) {
@@ -29,9 +30,10 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserServ
          if (holder.isPasscodeLocked()) {
              Toast.makeText(getApplicationContext(), LocaleController.getString(R.string.EnterYourTelegramPasscode), Toast.LENGTH_LONG).show();
 diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerReceiver.java b/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerReceiver.java
+index b2fa7d3..ee5ae6f 100644
 --- a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerReceiver.java
 +++ b/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerReceiver.java
-@@ -17,6 +17,7 @@
+@@ -17,6 +17,7 @@ public class MusicPlayerReceiver extends BroadcastReceiver {
  
      @Override
      public void onReceive(Context context, Intent intent) {
@@ -40,9 +42,10 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerRecei
              if (intent.getExtras() == null) {
                  return;
 diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerService.java b/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerService.java
+index 54ad910..e37017d 100644
 --- a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerService.java
 +++ b/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerService.java
-@@ -64,6 +64,7 @@
+@@ -64,6 +64,7 @@ public class MusicPlayerService extends Service implements NotificationCenter.No
  
      private RemoteControlClient remoteControlClient;
      private AudioManager audioManager;
@@ -50,7 +53,7 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerServi
  
      private static boolean supportBigNotifications = Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN;
      // Register only one playback backend. On modern Xiaomi ROMs the legacy
-@@ -95,6 +96,11 @@
+@@ -96,6 +97,11 @@ public class MusicPlayerService extends Service implements NotificationCenter.No
  
      @Override
      public void onCreate() {
@@ -62,7 +65,7 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerServi
          audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
          for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
              NotificationCenter.getInstance(a).addObserver(this, NotificationCenter.messagePlayingDidSeek);
-@@ -248,6 +254,10 @@
+@@ -250,6 +256,10 @@ public class MusicPlayerService extends Service implements NotificationCenter.No
      @SuppressLint("NewApi")
      @Override
      public int onStartCommand(Intent intent, int flags, int startId) {
@@ -73,7 +76,7 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerServi
          try {
              if (intent != null && (getPackageName() + ".STOP_PLAYER").equals(intent.getAction())) {
                  MediaController.getInstance().cleanupPlayer(true, true);
-@@ -820,6 +830,10 @@
+@@ -825,6 +835,10 @@ public class MusicPlayerService extends Service implements NotificationCenter.No
      @SuppressLint("NewApi")
      @Override
      public void onDestroy() {
@@ -85,9 +88,10 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicPlayerServi
          super.onDestroy();
          stopForeground(true);
 diff --git a/TMessagesProj/src/main/java/org/telegram/ui/ExternalActionActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/ExternalActionActivity.java
+index 2486643..2a539f1 100644
 --- a/TMessagesProj/src/main/java/org/telegram/ui/ExternalActionActivity.java
 +++ b/TMessagesProj/src/main/java/org/telegram/ui/ExternalActionActivity.java
-@@ -69,9 +69,16 @@
+@@ -69,9 +69,16 @@ public class ExternalActionActivity extends Activity implements INavigationLayou
      private boolean passcodeSaveIntentIsRestore;
  
      private Runnable lockRunnable;
@@ -104,7 +108,7 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/ui/ExternalActionActivity.
          ApplicationLoader.postInitApplication();
  
          requestWindowFeature(Window.FEATURE_NO_TITLE);
-@@ -508,6 +515,7 @@
+@@ -508,6 +515,7 @@ public class ExternalActionActivity extends Activity implements INavigationLayou
      @Override
      protected void onPause() {
          super.onPause();
@@ -112,7 +116,7 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/ui/ExternalActionActivity.
          actionBarLayout.onPause();
          if (AndroidUtilities.isTablet()) {
              layersActionBarLayout.onPause();
-@@ -522,12 +530,14 @@
+@@ -522,12 +530,14 @@ public class ExternalActionActivity extends Activity implements INavigationLayou
      @Override
      protected void onDestroy() {
          super.onDestroy();
@@ -128,9 +132,10 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/ui/ExternalActionActivity.
          if (AndroidUtilities.isTablet()) {
              layersActionBarLayout.onResume();
 diff --git a/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
+index b616c4b..ab3b505 100644
 --- a/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
 +++ b/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
-@@ -397,8 +397,7 @@
+@@ -401,8 +401,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
          if (!org.telegram.messenger.ApiCredentials.isConfigured(this)) {
              awaitingApiSetup = true;
              super.onCreate(savedInstanceState);
@@ -141,9 +146,10 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java b/T
          }
          isActive = true;
 diff --git a/TMessagesProj/src/main/java/org/telegram/ui/ShareActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/ShareActivity.java
+index a786791..593c695 100644
 --- a/TMessagesProj/src/main/java/org/telegram/ui/ShareActivity.java
 +++ b/TMessagesProj/src/main/java/org/telegram/ui/ShareActivity.java
-@@ -36,6 +36,11 @@
+@@ -36,6 +36,11 @@ public class ShareActivity extends Activity {
  
      @Override
      protected void onCreate(Bundle savedInstanceState) {

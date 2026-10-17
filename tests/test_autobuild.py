@@ -114,6 +114,43 @@ class VersionTest(BuildFixture):
                 self.assertEqual(failure.exception.code, 2)
 
 
+class AutomationTest(BuildFixture):
+    def release(self, name, commit, inputs):
+        folder = self.work / "dist" / f"TG-Media-{name}"
+        self.write(folder / "build-provenance.json", json.dumps({"upstream_commit": commit, "patch_inputs": inputs}))
+        return folder
+
+    def test_next_revision_starts_at_one_and_skips_existing_releases(self):
+        output = self.work / "dist"
+        self.assertEqual(autobuild.next_revision(self.source, output), 1)
+        (output / "TG-Media-1.2.3-hyperos.1").mkdir(parents=True)
+        (output / "TG-Media-1.2.3-hyperos.2").mkdir()
+        self.assertEqual(autobuild.next_revision(self.source, output), 3)
+
+    def test_built_release_requires_the_same_upstream_and_patch_inputs(self):
+        inputs = source_tools.project_inputs(self.project)
+        current = self.release("1.2.3-hyperos.1", "1" * 40, inputs)
+        self.release("1.2.3-hyperos.2", "2" * 40, inputs)
+        self.assertEqual(autobuild.built_release(self.work / "dist", "1" * 40), current)
+        self.assertIsNone(autobuild.built_release(self.work / "dist", "3" * 40))
+        self.write(self.project / "patches/tg-media.patch", "changed patch\n")
+        self.assertIsNone(autobuild.built_release(self.work / "dist", "1" * 40))
+
+    def test_unreadable_provenance_is_ignored(self):
+        self.write(self.work / "dist/TG-Media-broken/build-provenance.json", "{")
+        self.assertIsNone(autobuild.built_release(self.work / "dist", "1" * 40))
+
+    def test_skip_built_returns_before_downloading(self):
+        inputs = source_tools.project_inputs(self.project)
+        self.release("1.2.3-hyperos.1", "1" * 40, inputs)
+        argv = ["autobuild.py", "--skip-built", "--prepare-only", "--output", str(self.work / "dist")]
+        with mock.patch.object(sys, "argv", argv), mock.patch.object(autobuild, "resolve_ref", return_value="1" * 40), \
+                mock.patch.object(autobuild, "prepare") as prepare:
+            self.assertEqual(autobuild.main(), 0)
+        prepare.assert_not_called()
+        self.assertIn("UP-TO-DATE", self.output.getvalue())
+
+
 class EnvironmentTest(unittest.TestCase):
     def test_required_toolchain_variables_are_checked(self):
         for values in ({}, {"JAVA_HOME": "fixture-jdk"}, {"ANDROID_HOME": "fixture-sdk"}):

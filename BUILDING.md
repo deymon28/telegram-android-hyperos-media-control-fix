@@ -61,9 +61,18 @@ python scripts/autobuild.py --ref master --prepare-only
 # Resume a prepared tree; its inventory and patch hashes must still match.
 python scripts/autobuild.py --prepared-source .work/PREVIOUS-RUN/Telegram --keystore ../private-signing/tg-media.jks
 
+# Unattended check: exit successfully without downloading when the current
+# official commit was already built from the current patches.
+python scripts/autobuild.py --skip-built --keystore ../private-signing/tg-media.jks
+
 # Read all options.
 python scripts/autobuild.py --help
 ```
+
+For scheduled builds, run the `--skip-built` command from Task Scheduler, cron, or a
+systemd timer with the signing password supplied by a protected secret store. A
+failed patch or check exits with status 1 and leaves no release output. Install
+updates manually.
 
 Each run uses a fresh generated directory under `.work/`. Downloads are cached in
 `.cache/` and checked before reuse. `--cache`, `--work-dir`, `--output`, `--gradle`,
@@ -73,14 +82,17 @@ cancellation stops the process tree belonging to the invoked build. JDK, SDK,
 and Gradle dependency resolution still require network access
 unless the required packages and dependencies are cached.
 
-`--revision` defaults to 2. The displayed name is the upstream version plus
-`-hyperos.REVISION`; the Android version code is `upstreamCode * 100 + revision`.
-For another release on the same upstream version, increment the revision. Explicit
+`--revision` defaults to the next unused revision in the output directory, starting
+at 1. The displayed name is the upstream version plus `-hyperos.REVISION`; the
+Android version code is `upstreamCode * 100 + revision`. Explicit
 `--version-name` and `--version-code` overrides are available. Existing release
 output directories are never overwritten.
 
 `--locked path/to/sources.lock.json` reproduces a prior resolution from its saved
-manifest. Hashes for newly discovered commits are recorded from HTTPS downloads;
+manifest. GitHub archives are pinned by their SHA-256. googlesource (libyuv)
+regenerates archive bytes for every request, so its lock entry pins
+`content_sha256`, a digest of the extracted file paths and contents. Hashes for newly
+discovered commits are recorded from HTTPS downloads;
 this records provenance and detects later corruption, not an independent signature
 or an audit of all upstream changes. New or unsupported submodule hosts stop the
 build for review. Source archive traversal, escaping links, and case/path conflicts
